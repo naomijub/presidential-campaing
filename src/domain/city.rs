@@ -1,9 +1,23 @@
 use rayon::prelude::*;
 use serde::Deserialize;
+use std::collections::HashSet;
 
 const POINTS_TO_DISTANCE: usize = 2;
 pub trait Distance {
     fn distance(&self) -> f64;
+}
+
+pub trait Unique {
+    fn uniqueness_count(&mut self) -> usize;
+}
+
+impl Unique for Vec<City> {
+    fn uniqueness_count(&mut self) -> usize {
+        self.drain(0..)
+            .map(|c| format!("{:?}-{:?}", c.City, c.State))
+            .collect::<HashSet<String>>()
+            .len()
+    }
 }
 
 #[derive(Clone, PartialEq, Deserialize, PartialOrd, Debug)]

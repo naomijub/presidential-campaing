@@ -1,27 +1,31 @@
 mod domain;
 mod io;
-use domain::gene::{Evolution, Gene};
+use domain::route::{Evolution, Route};
 use io::read_csv;
 use std::string::ToString;
 
-const POPULATION_SIZE: usize = 60; // For test.csv 10
+const POPULATION_SIZE: usize = 50; // For test.csv 10
 const MINIMUM_FITNESS: f64 = 21f64;
 
 fn main() {
     let cities = read_csv();
-    let mut best: Gene;
+    let mut best: Route;
 
     'outer: loop {
         let mut counter = 0usize;
         let mut best_counter = 0usize;
-        best = Gene::default();
+        best = Route::default();
 
         let mut population = (0..POPULATION_SIZE)
-            .map(|_| Gene::new(&cities))
-            .collect::<Vec<Gene>>();
+            .map(|_| Route::new(&cities))
+            .collect::<Vec<Route>>();
 
         'inner: loop {
-            population = population.mutate().crossing_over().recalculate_fitness();
+            population = population
+                .crossing_over()
+                .recalculate_fitness()
+                .mutate()
+                .recalculate_fitness();
 
             let local_best = population.get_best();
 
@@ -32,7 +36,7 @@ fn main() {
                     "{}: {:?}, {:?}",
                     counter,
                     best.fitness,
-                    domain::gene::DISTANCE_REWARD / best.distance
+                    domain::route::DISTANCE_REWARD / best.distance
                 );
             }
             counter += 1usize;

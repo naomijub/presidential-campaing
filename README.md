@@ -1,25 +1,26 @@
 # The algorithm
+* This was not pushed to any repo, it just have a few commits.
 
 As a basic travel salesperson algorithm, I decided to go with the best easiest solution that is to use a Genetic algorithm to solve this problem. Faster and less precise algorithms would be Greedy and Local Reasearch, as well as a simples simulated annealing.
 
-To avoid convergence problems the inner loop terminates when the last best counter is greater than the current counter plus 600. This took an average of 7 loops to find the solution. 
+To avoid convergence problems the inner loop terminates when the last best counter is greater than the current counter plus 600. This took between 3 and 15 loops to find a solution, mostly between 3 and 7.
 
 ```rust
 fn main() {
     let cities = read_csv();
-    let mut best: Gene;
+    let mut best: Route;
 
     'outer: loop {
         let mut counter = 0usize;
         let mut best_counter = 0usize;
-        best = Gene::default();
+        best = Route::default();
 
         let mut population = (0..POPULATION_SIZE)
-            .map(|_| Gene::new(&cities))
-            .collect::<Vec<Gene>>();
+            .map(|_| Route::new(&cities))
+            .collect::<Vec<Route>>();
 
         'inner: loop {
-            population = population.mutate().crossing_over().recalculate_fitness();
+            population = population.crossing_over().recalculate_fitness().mutate().recalculate_fitness();
 
             let local_best = population.get_best();
 
@@ -27,7 +28,7 @@ fn main() {
                 best = local_best;
             }
 
-            if counter > best_counter + 600 {
+            if counter > best_counter + 300 {
                 break 'inner;
             }
             if best.fitness > MINIMUM_FITNESS {
@@ -41,7 +42,7 @@ fn main() {
 }
 ```
 
-Whenever the `'inner` loop breaks, the `local_best` is show, that mean, the best `Gene` for that loop. When the `'outer` loop breaks, the best `Gene` is printed.
+Whenever the `'inner` loop breaks, the `local_best` is show, that mean, the best `Route` for that loop. When the `'outer` loop breaks, the best `Route` is printed.
 ```rust
 if counter > best_counter + 600 {
     break 'inner;
@@ -49,9 +50,9 @@ if counter > best_counter + 600 {
 ```
 
 ### The implementation
-The basic key concept of this algorithm is the population that in this case is a `Vec<Gene>` and implement the trait `Evolution` for `Vec<Gene>`. The trait `Evolution` is responsable for the main caculation in this code base which is `population.mutate().crossing_over().recalculate_fitness().get_best`. The function `mutate` gently mutates the reasonable best `Gene`s by swapping two element of its "gene streams". `crossing_over` is responsable for selecting the current best, inserting it in the next population and then for each other element in the vector it chooses the best fitted element between 15 elements of the gene stream. `recalculate_fitness` recalculates the fitness for each `Gene`.
+The basic key concept of this algorithm is the population that in this case is a `Vec<Route>` and implement the trait `Evolution` for `Vec<Route>`. The trait `Evolution` is responsable for the main caculation in this code base which is `population.crossing_over().recalculate_fitness().mutate().recalculate_fitness().get_best`. The function `mutate` gently mutates the reasonable best `Route`s by swapping two element of its "gene streams". `crossing_over` is responsable for selecting the current best, inserting it in the next population and then for each other element in the vector it chooses the best fitted element between 15 elements of the gene stream probably (70%) mix with another one in the next generation. `recalculate_fitness` recalculates the fitness for each `Route`.
 
-The Gene implementation has the fields `cities: Vec<City>, distance: f64, fitness: f64`, where `cities` is the `Gene` itself, `distance` is total distance between each consecutive node of `City` in `cities`, in latitude/longitude (did not convert to km). `fitness` is the value to be compared when looking for the best.
+The Route implementation has the fields `cities: Vec<City>, distance: f64, fitness: f64`, where `cities` is the `Route` itself, `distance` is total distance between each consecutive node of `City` in `cities`, in latitude/longitude (did not convert to km). `fitness` is the value to be compared when looking for the best.
 
 `City` is basically a wrapper of the CSV line content, this is why `#[allow(non_snake_case)]` was used, so I could easily match the CSV headers with my struct. The total `distance` implementation is a trait `Distance` implemented for `Vec<City>`, it sums the distance of each pair of cities:
 
@@ -65,6 +66,9 @@ impl Distance for Vec<City> {
 }
 ```
 
+* `Route` is the chromossom and `City` is the gene.
+* I really hate that `main` is so mutable.
+
 ### Crates used
 * `rand`: Generates a near safe approximation of a randomly seeded sequence. Important for better variability in the code. As well as retrieving random slices.
 * `csv`: Parses csv files. 
@@ -72,10 +76,26 @@ impl Distance for Vec<City> {
 * `rayon`: Rayon was a test on parallelism that I didn't remove, it had a very small time improvement, but the heavies calculation in not thread safe and it is found in `crossing_over` function.
 
 ### Possible Improvements
-* Test, as it is a common algorithm which hardest part is not the logic itself, but the tunning of the algorithm, I used my time trying to tune it better (Did not work quite well).
-* As I said before, tune better.
 * One possible improvement would be some normalization algorithm for the `fitness` value.
-  
+* Test, as it is a common algorithm which hardest part is not the logic itself, but the tunning of the algorithm, I used my time trying to tune it better than test it. However, I elaborated a test guide for this problem:
+    * `io::read_csv` could read at an integration level `test.csv`.
+    * `domain::city::uniqueness_count` could receive a vector that we know how many unique elements there are in it.
+    * `domain::city::octagonal_distance` is just simples math, but we could test it indirectly via `domain::city::distance` for more than 2 elements in the vector.
+    * `domain::route::mutate` is possible to test with a small vector of `Route` that have a known fitness. Only one of them would have a fitness that could mutate so we could check that the mutated element is different than the previous one, as well as testing that the others remained the same.
+    * The problem of testing `domain::route::recalculate_fitness` is that it has many variable, and some of them are expensive to test, like `uniqueness_prize`. However, its negative value is known to us, so we could test `San Francisco` prize in each case as well as the fitness calculation for specific `distances`.
+    * `domain::route::crossing_over` is the hardest to test as it has random values associated with it. Usually when we have random values and need to unit test something, we pass it as argument, but in this case we would need to pass too many random values to make this feasable. The simplest test would be to assure the previous population and the new population are different.
+    * `domain::route::choose_parent` could be tested by fixing a population of size `CROSSING_OVER_CANDIDATES`, then we would know the best fitness and select it. Maybe `CROSSING_OVER_CANDIDATES` could be annotated with `#[cfg(test)]` and have size 3 to help us have a smaller population to choose from.
+    * `domain::route::get_best` is mostly giving a know population, with known fitnesses, and selecting the best, that we already know.
+    * `domain::route::gcalculate_fitness` is just mathematics like `octagonal_distance`.
+    * `MyOrd::cmp` would be interesting to test, but it only needs two cases, 1. larger float tested againt smaller float, 2. smaller float tested against larger float.
+
+
+
+### Other possible solutions:
+* Bruteforce: Calculate all possible routes and find shortes. This would be OK for small number of elements, but neat impossible for large number of elements as it `O(N!)`.
+* Lexical Order: similar to bruteforce but elements are organized in order, and the best order is saved.
+* Genetic Algorithm without `cross_over`: the main ideia here is that crossing over introduces the problem of uniqueness and the calculations between each interaction may take longer than necessary. So we just comment `crossing_over` and let mutation happen, `population.mutate().recalculate_fitness();`. Mutation usually needs more interactions than `crossing_over` but each cycle is faster, therefore this `if`, `counter > best_counter + 600`, could be changed to `counter > best_counter + 1500`. This has less chance of optimal solution than with `crossing_over`
+
 ## The distance function
 The best way to calculate the exact distance in an Euclidean Space is to use the Euclidean Distance Algorithm. However, this approach can be overengineer as it takes longer to calculate and won't stay linear over distance increase due to power of 2 and square root. So my approach was to use a more empiracal calculation that would reduce calculation time by half using the data I had. It was inspired by the octagonal approximation of points in the N-Space. The error compared to Eucledean Algorithm is around +/-1.5% that is sufficient to calculate distance on a national scale and assume it is perfectly correct (road, detours, fueling, etc).
 
@@ -98,7 +118,7 @@ let cities_rand = cities.choose_multiple(&mut rng, cities.len()).cloned().collec
 
 ## Comparing Floats
 
-Rust doesn't have a std solution to compare float, so in most cases the crate `ordered_float` can be used. However, as I didn't want to use too many crates, I came with a simple solution that is comparing without equity by implementing a trait called `MyOrd` which has and `Ordering` as result. This helps us retrieve the best `Gene` in a population by comparing `fitness`.
+Rust doesn't have a std solution to compare float, so in most cases the crate `ordered_float` can be used. However, as I didn't want to use too many crates, I came with a simple solution that is comparing without equity by implementing a trait called `MyOrd` which has and `Ordering` as result. This helps us retrieve the best `Route` in a population by comparing `fitness`.
 
 ```rust
 use std::cmp::Ordering;
@@ -117,6 +137,7 @@ impl MyOrd for f64 {
 To run the `cities_all.csv` you should execute `cargo run --release < cities_all.csv` and to runt he `test.csv` you should run `cargo run --release < test.csv`.
 
 * As `test.csv` is way smaller, its coefficients are different and the tunning was way easier. Not fixing the coefficient for `test.csv` will result in a case where the best solution is to almost never leave `San Francisco`.
+* If you want a more optimal solution `const MINIMUM_FITNESS: f64 = 21f64` could be changed to `23f64`, but this can take around 20 interactions
 
 ## Example output:
 To keep track of the time taken the program prints the new best interation counter, the current best fitness and the normalized distance.

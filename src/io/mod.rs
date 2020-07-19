@@ -1,7 +1,7 @@
 use crate::domain::city::City;
 
 pub fn read_csv() -> Vec<City> {
-    let header = csv::StringRecord::from(vec!["City","State","Latitude","Longitude"]);
+    let header = csv::StringRecord::from(vec!["City", "State", "Latitude", "Longitude"]);
     let mut rdr = csv::Reader::from_reader(std::io::stdin());
 
     let mut cities = rdr
