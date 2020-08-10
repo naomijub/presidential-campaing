@@ -5,7 +5,7 @@ use io::read_csv;
 use std::string::ToString;
 
 const POPULATION_SIZE: usize = 50; // For test.csv 10
-const MINIMUM_FITNESS: f64 = 21f64;
+const MINIMUM_FITNESS: f64 = 24f64;
 
 fn main() {
     let cities = read_csv();
