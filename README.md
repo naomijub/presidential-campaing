@@ -1,7 +1,4 @@
-# The algorithm
-* This was not pushed to any repo, it just have a few commits.
-
-As a basic travel salesperson algorithm, I decided to go with the best easiest solution that is to use a Genetic algorithm to solve this problem. Faster and less precise algorithms would be Greedy and Local Reasearch, as well as a simples simulated annealing.
+# Genetic algorithm on travel salesperson with Rust
 
 To avoid convergence problems the inner loop terminates when the last best counter is greater than the current counter plus 600. This took between 3 and 15 loops to find a solution, mostly between 3 and 7.
 
@@ -89,12 +86,6 @@ impl Distance for Vec<City> {
     * `domain::route::gcalculate_fitness` is just mathematics like `octagonal_distance`.
     * `MyOrd::cmp` would be interesting to test, but it only needs two cases, 1. larger float tested againt smaller float, 2. smaller float tested against larger float.
 
-
-
-### Other possible solutions:
-* Bruteforce: Calculate all possible routes and find shortes. This would be OK for small number of elements, but neat impossible for large number of elements as it `O(N!)`.
-* Lexical Order: similar to bruteforce but elements are organized in order, and the best order is saved.
-* Genetic Algorithm without `cross_over`: the main ideia here is that crossing over introduces the problem of uniqueness and the calculations between each interaction may take longer than necessary. So we just comment `crossing_over` and let mutation happen, `population.mutate().recalculate_fitness();`. Mutation usually needs more interactions than `crossing_over` but each cycle is faster, therefore this `if`, `counter > best_counter + 600`, could be changed to `counter > best_counter + 1500`. This has less chance of optimal solution than with `crossing_over`
 
 ## The distance function
 The best way to calculate the exact distance in an Euclidean Space is to use the Euclidean Distance Algorithm. However, this approach can be overengineer as it takes longer to calculate and won't stay linear over distance increase due to power of 2 and square root. So my approach was to use a more empiracal calculation that would reduce calculation time by half using the data I had. It was inspired by the octagonal approximation of points in the N-Space. The error compared to Eucledean Algorithm is around +/-1.5% that is sufficient to calculate distance on a national scale and assume it is perfectly correct (road, detours, fueling, etc).
