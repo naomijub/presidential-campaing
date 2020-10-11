@@ -1,4 +1,4 @@
-# Genetic algorithm on travel salesperson with Rust
+# Genetic algorithm for travel salesperson with Rust
 
 To avoid convergence problems the inner loop terminates when the last best counter is greater than the current counter plus 600. This took between 3 and 15 loops to find a solution, mostly between 3 and 7.
 
